@@ -43,6 +43,7 @@ namespace {
     static bool initial = true;
     fcntl(ifd, F_SETFL, 0);
     while(true) {
+      bool watched_at_least_one_new_file = false;
       if(!paths_to_watch.empty()) {
         auto it = paths_to_watch.begin();
         while(it != paths_to_watch.end()) {
@@ -60,12 +61,17 @@ namespace {
             }
             watched_paths[wd] = *dis;
             paths_to_watch.erase(dis);
+            if(!watched_at_least_one_new_file) {
+              watched_at_least_one_new_file = true;
+              /* enter non-blocking mode, so the loop becomes a poll */
+              fcntl(ifd, F_SETFL, O_NONBLOCK);
+            }
           }
         }
         initial = false;
       }
       bool ready_to_read;
-      if(!watched_paths.empty()) {
+      if(!paths_to_watch.empty() && !watched_at_least_one_new_file) {
         fd_set fds;
         FD_ZERO(&fds);
         FD_SET(ifd, &fds);
@@ -116,6 +122,8 @@ namespace {
               fprintf(stderr, "%s was deleted or moved\n", path.c_str());
               paths_to_watch.emplace_back(path);
               watched_paths.erase(it);
+              /* enter non-blocking mode, so the loop becomes a poll */
+              fcntl(ifd, F_SETFL, O_NONBLOCK);
             }
           }
         }
@@ -135,8 +143,8 @@ int main(int argc, char* argv[]) {
     paths_to_watch.emplace_back(argv[i]);
   }
   while(1) {
-    run_command(argv[1]);
     wait_for_events();
+    run_command(argv[1]);
   }
   return 0;
 }
