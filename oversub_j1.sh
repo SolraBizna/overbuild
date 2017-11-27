@@ -18,11 +18,12 @@
 # along with overbuild.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+SIZE=$(stty size)
+ROWS=$(echo $SIZE | cut -f 1 -d " ")
+COLS=$(echo $SIZE | cut -f 2 -d " ")
+
 echo -ne "\\r\\e[0;0H\\e[33m*** Build pending... ***\\e[0m"
 if ! make -k -j1 2>/tmp/oversub_result.txt >/dev/null; then
-    SIZE=$(stty size)
-    ROWS=$(echo $SIZE | cut -f 1 -d " ")
-    COLS=$(echo $SIZE | cut -f 2 -d " ")
     clear
     echo -e "\\e[31m*** Build failed ***\\e[0m"
     head -n $(( $ROWS - 2 )) /tmp/oversub_result.txt | \
